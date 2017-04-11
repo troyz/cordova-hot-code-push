@@ -24,6 +24,8 @@ import com.nordnetab.chcp.main.storage.IObjectFileStorage;
 import com.nordnetab.chcp.main.utils.FilesUtility;
 import com.nordnetab.chcp.main.utils.URLUtility;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -82,6 +84,27 @@ class UpdateLoaderWorker implements WorkerTask {
                 || TextUtils.isEmpty(newContentConfig.getContentUrl())) {
             setErrorResult(ChcpError.NEW_APPLICATION_CONFIG_IS_INVALID, null);
             return;
+        }
+
+        // added by troyz
+        // check by release version date
+        try
+        {
+            if(newContentConfig.getReleaseVersion() != null && newContentConfig.getReleaseVersion().length() > 0
+                    && oldAppConfig.getContentConfig().getReleaseVersion() != null && oldAppConfig.getContentConfig().getReleaseVersion().length() > 0)
+            {
+                SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy.MM.dd-HH.mm.ss");
+                Date releaseDate = dateFormat.parse(newContentConfig.getReleaseVersion());
+                Date oldReleaseDate = dateFormat.parse(oldAppConfig.getContentConfig().getReleaseVersion());
+                if(releaseDate != null && oldReleaseDate != null && oldReleaseDate.after(releaseDate))
+                {
+                    setNothingToUpdateResult(newAppConfig);
+                    return;
+                }
+            }
+        }
+        catch (Exception e)
+        {
         }
 
         // check if there is a new content version available

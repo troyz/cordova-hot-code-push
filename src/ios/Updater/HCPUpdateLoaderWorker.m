@@ -60,6 +60,13 @@
     [self runWithComplitionBlock:nil];
 }
 
+-(NSDate *)dateFromString:(NSString *)dateString withDateFormat:(NSString *)formate
+{
+    NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+    [dateFormatter setDateFormat:formate];
+    return [dateFormatter dateFromString:dateString];
+}
+
 // TODO: refactoring is required after merging https://github.com/nordnet/cordova-hot-code-push/pull/55.
 // To reduce merge conflicts leaving it as it is for now.
 - (void)runWithComplitionBlock:(void (^)(void))updateLoaderComplitionBlock {
@@ -83,6 +90,25 @@
             return;
         }
         
+        // added by troyz
+        // check by release version date
+        @try
+        {
+            if(newAppConfig.contentConfig.releaseVersion.length && _oldAppConfig.contentConfig.releaseVersion.length)
+            {
+                NSString *format = @"yyyy.MM.dd-HH.mm.ss";
+                NSDate *releaseDate = [self dateFromString:newAppConfig.contentConfig.releaseVersion withDateFormat:format];
+                NSDate *oldReleaseDate = [self dateFromString:_oldAppConfig.contentConfig.releaseVersion withDateFormat:format];
+                if(releaseDate && oldReleaseDate && [oldReleaseDate timeIntervalSinceDate:releaseDate] > 0)
+                {
+                    [self notifyNothingToUpdate:newAppConfig];
+                    return;
+                }
+            }
+        }
+        @catch (NSException *exception)
+        {
+        }
         // check if new version is available
         if ([newAppConfig.contentConfig.releaseVersion isEqualToString:_oldAppConfig.contentConfig.releaseVersion]) {
             [self notifyNothingToUpdate:newAppConfig];
