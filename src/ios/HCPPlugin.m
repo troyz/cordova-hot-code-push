@@ -119,12 +119,60 @@ static NSString *const DEFAULT_STARTING_PAGE = @"index.html";
     _appConfig = [configStorage loadFromFolder:_filesStructure.wwwFolder];
 }
 
+-(NSDate *)dateFromString:(NSString *)dateString withDateFormat:(NSString *)formate
+{
+    NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+    [dateFormatter setDateFormat:formate];
+    return [dateFormatter dateFromString:dateString];
+}
+
+// 得到app安装包里面的version
+- (NSString *)oldAppReleaseVersion
+{
+    @try
+    {
+        if(!_filesStructure)
+        {
+            return nil;
+        }
+        NSURL *wwwUrl = [NSURL fileURLWithPath:[[NSBundle mainBundle] pathForResource:@"www" ofType:nil]];
+        if(!wwwUrl)
+        {
+            return nil;
+        }
+        id<HCPConfigFileStorage> configStorage = [[HCPApplicationConfigStorage alloc] initWithFileStructure:_filesStructure];
+        HCPApplicationConfig *localAppConfig = [configStorage loadFromFolder:wwwUrl];
+        if(localAppConfig && localAppConfig.contentConfig)
+        {
+            return localAppConfig.contentConfig.releaseVersion;
+        }
+    }
+    @catch (NSException *exception)
+    {
+        
+    }
+    return nil;
+}
+
 /**
  *  Check if www folder already exists on the external storage.
  *
  *  @return <code>YES</code> - www folder doesn't exist, we need to install it; <code>NO</code> - folder already installed
  */
-- (BOOL)isWWwFolderNeedsToBeInstalled {
+- (BOOL)isWWwFolderNeedsToBeInstalled 
+{
+    // 如果安装包中的日期新，则将安装包中的www目录安装到external storage
+    NSString *oldAppRelease = [self oldAppReleaseVersion];
+    if(oldAppRelease && oldAppRelease.length && _pluginInternalPrefs.currentReleaseVersionName && _pluginInternalPrefs.currentReleaseVersionName.length && ![oldAppRelease isEqualToString:_pluginInternalPrefs.currentReleaseVersionName])
+    {
+        NSString *format = @"yyyy.MM.dd-HH.mm.ss";
+        NSDate *releaseDate = [self dateFromString:_pluginInternalPrefs.currentReleaseVersionName withDateFormat:format];
+        NSDate *oldReleaseDate = [self dateFromString:oldAppRelease withDateFormat:format];
+        if(releaseDate && oldReleaseDate && [oldReleaseDate timeIntervalSinceDate:releaseDate] > 0)
+        {
+            return YES;
+        }
+    }
     NSFileManager *fileManager = [NSFileManager defaultManager];
     BOOL isApplicationUpdated = ![[NSBundle applicationBuildVersion] isEqualToString:_pluginInternalPrefs.appBuildVersion];
     BOOL isWWwFolderExists = [fileManager fileExistsAtPath:_filesStructure.wwwFolder.path];

@@ -51,7 +51,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -551,6 +553,31 @@ public class HotCodePushPlugin extends CordovaPlugin {
      * @return <code>true</code> - plugin is ready; otherwise - <code>false</code>
      */
     private boolean isPluginReadyForWork() {
+        // 如果安装包中的日期新，则将安装包中的www目录安装到external storage
+        try
+        {
+            if(pluginInternalPrefs != null && pluginInternalPrefs.getCurrentReleaseVersionName() != null)
+            {
+                final ApplicationConfig appConfig = ApplicationConfig.configFromAssets(cordova.getActivity(), PluginFilesStructure.CONFIG_FILE_NAME);
+                if(appConfig != null && appConfig.getContentConfig() != null
+                        && appConfig.getContentConfig().getReleaseVersion() != null
+                        && !pluginInternalPrefs.getCurrentReleaseVersionName().equals(appConfig.getContentConfig().getReleaseVersion()))
+                {
+                    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy.MM.dd-HH.mm.ss");
+                    String oldReleaseVersion = appConfig.getContentConfig().getReleaseVersion();
+
+                    Date releaseDate = dateFormat.parse(pluginInternalPrefs.getCurrentReleaseVersionName());
+                    Date oldReleaseDate = dateFormat.parse(oldReleaseVersion);
+                    if(releaseDate != null && oldReleaseDate != null && oldReleaseDate.after(releaseDate))
+                    {
+                        return false;
+                    }
+                }
+            }
+        }
+        catch (Exception e)
+        {
+        }
         boolean isWwwFolderExists = isWwwFolderExists();
         boolean isWwwFolderInstalled = pluginInternalPrefs.isWwwFolderInstalled();
         boolean isApplicationHasBeenUpdated = isApplicationHasBeenUpdated();
